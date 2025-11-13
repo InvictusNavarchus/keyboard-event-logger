@@ -1,0 +1,5 @@
+{
+  "name": "Keyboard Event Inspector",
+  "description": "A simple yet powerful web app to inspect and visualize keyboard events in real-time. See every keydown, keyup, and keypress event with detailed properties.",
+  "requestFramePermissions": []
+}
