@@ -71,6 +71,7 @@ export default function App() {
     [KeyEventType.KeyUp]: true,
     [KeyEventType.KeyPress]: true,
   });
+  const [isCopied, setIsCopied] = useState(false);
 
   const handleKeyEvent = useCallback((e: KeyboardEvent) => {
     // keypress is deprecated, but we'll still show it if the browser fires it.
@@ -114,6 +115,42 @@ export default function App() {
   const filteredEvents = useMemo(() => {
     return events.filter(e => filters[e.type]);
   }, [events, filters]);
+
+  const copyLog = useCallback(() => {
+    if (filteredEvents.length === 0 || isCopied) return;
+
+    const logText = filteredEvents
+      .map(event => {
+        const timePart = event.timestamp.toLocaleTimeString('en-US', {
+          hour12: false,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        });
+        const msPart = event.timestamp.getMilliseconds().toString().padStart(3, '0');
+        const formattedTime = `${timePart}.${msPart}`;
+        
+        const modifiers = [];
+        if (event.altKey) modifiers.push('Alt');
+        if (event.ctrlKey) modifiers.push('Ctrl');
+        if (event.shiftKey) modifiers.push('Shift');
+        if (event.metaKey) modifiers.push('Meta');
+
+        const keyString = event.key === ' ' ? `'${event.key}'` : event.key;
+        let line = `[${formattedTime}] ${event.type.padEnd(8)} | key: ${keyString.padEnd(10)} | code: ${event.code.padEnd(10)} | keyCode: ${String(event.keyCode).padEnd(5)}`;
+        if (modifiers.length > 0) {
+          line += ` | modifiers: ${modifiers.join(', ')}`;
+        }
+        return line;
+      })
+      .reverse() // events are stored newest first, so reverse for chronological copy
+      .join('\n');
+
+    navigator.clipboard.writeText(logText).then(() => {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    });
+  }, [filteredEvents, isCopied]);
   
   const filterOptions: { type: KeyEventType; color: string; hoverColor: string; textColor: string; ringColor: string }[] = [
       { type: KeyEventType.KeyDown, color: 'bg-green-600', hoverColor: 'bg-green-500', textColor: 'text-green-50', ringColor: 'ring-green-400' },
@@ -147,15 +184,33 @@ export default function App() {
             </button>
           ))}
         </div>
-        <button
-            onClick={clearLog}
-            className="ml-auto bg-gray-700 hover:bg-red-600 hover:text-white text-gray-300 font-bold py-2 px-4 rounded transition-colors duration-200 flex items-center gap-2"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-          Clear Log
-        </button>
+        <div className="ml-auto flex items-center gap-3">
+            <button
+                onClick={copyLog}
+                disabled={filteredEvents.length === 0 || isCopied}
+                className={`font-bold py-2 px-4 rounded transition-colors duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isCopied 
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-gray-700 hover:bg-cyan-600 hover:text-white text-gray-300'
+                }`}
+            >
+              {isCopied ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+              )}
+              {isCopied ? 'Copied!' : 'Copy Log'}
+            </button>
+            <button
+                onClick={clearLog}
+                className="bg-gray-700 hover:bg-red-600 hover:text-white text-gray-300 font-bold py-2 px-4 rounded transition-colors duration-200 flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Clear Log
+            </button>
+        </div>
       </div>
 
       <main className="flex-grow bg-gray-800 rounded-lg shadow-inner h-[65vh] overflow-y-auto p-4 space-y-3">
