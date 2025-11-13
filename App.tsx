@@ -15,8 +15,21 @@ const EventRow: React.FC<{ event: CapturedEvent }> = ({ event }) => {
     [KeyEventType.KeyPress]: 'bg-blue-500/80 text-blue-50 border-blue-400',
   };
 
+  // FIX: The `fractionalSecondDigits` option is not available in all TypeScript lib versions.
+  // Manually format the time to include milliseconds for broader compatibility.
+  const timePart = event.timestamp.toLocaleTimeString('en-US', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  const msPart = event.timestamp.getMilliseconds().toString().padStart(3, '0');
+  const formattedTime = `${timePart}.${msPart}`;
+
   return (
     <div className="bg-gray-700/50 p-3 rounded-md flex flex-wrap gap-x-4 gap-y-2 items-center text-sm ring-1 ring-gray-600/50 hover:ring-cyan-400/50 transition-shadow shadow-sm">
+      <span className="text-gray-400 w-28 text-left font-semibold">{formattedTime}</span>
+
       <span className={`px-2.5 py-1 rounded-full text-xs font-semibold w-24 text-center border ${typeStyles[event.type]}`}>
         {event.type}
       </span>
@@ -64,6 +77,7 @@ export default function App() {
     // Some keys don't fire keypress (e.g., modifier keys), which is normal.
     const newEvent: CapturedEvent = {
       id: Date.now() + Math.random(), // Add random to avoid collision on fast events
+      timestamp: new Date(),
       type: e.type as KeyEventType,
       key: e.key,
       code: e.code,

@@ -7,6 +7,7 @@ export enum KeyEventType {
 
 export interface CapturedEvent {
   id: number;
+  timestamp: Date;
   type: KeyEventType;
   key: string;
   code: string;
