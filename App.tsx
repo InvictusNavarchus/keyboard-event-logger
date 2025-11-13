@@ -119,32 +119,35 @@ export default function App() {
   const copyLog = useCallback(() => {
     if (filteredEvents.length === 0 || isCopied) return;
 
-    const logText = filteredEvents
-      .map(event => {
-        const timePart = event.timestamp.toLocaleTimeString('en-US', {
-          hour12: false,
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        });
-        const msPart = event.timestamp.getMilliseconds().toString().padStart(3, '0');
-        const formattedTime = `${timePart}.${msPart}`;
-        
-        const modifiers = [];
-        if (event.altKey) modifiers.push('Alt');
-        if (event.ctrlKey) modifiers.push('Ctrl');
-        if (event.shiftKey) modifiers.push('Shift');
-        if (event.metaKey) modifiers.push('Meta');
+    const headers = [
+      'timestamp', 'type', 'key', 'code', 'keyCode', 'which',
+      'altKey', 'ctrlKey', 'metaKey', 'shiftKey'
+    ];
 
-        const keyString = event.key === ' ' ? `'${event.key}'` : event.key;
-        let line = `[${formattedTime}] ${event.type.padEnd(8)} | key: ${keyString.padEnd(10)} | code: ${event.code.padEnd(10)} | keyCode: ${String(event.keyCode).padEnd(5)}`;
-        if (modifiers.length > 0) {
-          line += ` | modifiers: ${modifiers.join(', ')}`;
-        }
-        return line;
-      })
+    const csvRows = filteredEvents
+      .slice() // Create a shallow copy to avoid mutating state
       .reverse() // events are stored newest first, so reverse for chronological copy
-      .join('\n');
+      .map(event => {
+        // For CSV, if a value contains a comma, it should be wrapped in quotes.
+        const key = event.key.includes(',') ? `"${event.key}"` : event.key;
+        const code = event.code.includes(',') ? `"${event.code}"` : event.code;
+
+        return [
+          event.timestamp.toISOString(),
+          event.type,
+          key,
+          code,
+          event.keyCode,
+          event.which,
+          event.altKey,
+          event.ctrlKey,
+          event.metaKey,
+          event.shiftKey
+        ].join(',');
+      });
+
+    // Combine headers and rows into a single CSV string
+    const logText = [headers.join(','), ...csvRows].join('\n');
 
     navigator.clipboard.writeText(logText).then(() => {
       setIsCopied(true);
